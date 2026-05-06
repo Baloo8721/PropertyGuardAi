@@ -1,972 +1,690 @@
-import { useState, useEffect, useRef } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property Guard - Security Dashboard</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    import { useState, useEffect, useRef } from "react";
 
-// ── MOCK DATA ──────────────────────────────────────────────────────────────
-const CAMERAS = [
-  { id: 1, name: "Front-Left", zone: "perimeter", status: "live", threat: null },
-  { id: 2, name: "Front-Right", zone: "perimeter", status: "live", threat: null },
-  { id: 3, name: "Driveway", zone: "entry", status: "live", threat: "vehicle" },
-  { id: 4, name: "Front Door", zone: "entry", status: "live", threat: null },
-  { id: 5, name: "Back-Left", zone: "backyard", status: "live", threat: null },
-  { id: 6, name: "Back-Right", zone: "backyard", status: "live", threat: null },
-  { id: 7, name: "Backyard", zone: "backyard", status: "live", threat: "animal" },
-  { id: 8, name: "Side Gate", zone: "perimeter", status: "offline", threat: null },
-  { id: 9, name: "Feeder Cam", zone: "wildlife", status: "live", threat: "animal" },
-];
+    // ── MOCK DATA ──────────────────────────────────────────────────────────────
+    const CAMERAS = [
+      { id: 1, name: "Front-Left", zone: "perimeter", status: "live", threat: null },
+      { id: 2, name: "Front-Right", zone: "perimeter", status: "live", threat: null },
+      { id: 3, name: "Driveway", zone: "entry", status: "live", threat: "vehicle" },
+      { id: 4, name: "Front Door", zone: "entry", status: "live", threat: null },
+      { id: 5, name: "Back-Left", zone: "backyard", status: "live", threat: null },
+      { id: 6, name: "Back-Right", zone: "backyard", status: "live", threat: null },
+      { id: 7, name: "Backyard", zone: "backyard", status: "live", threat: "animal" },
+      { id: 8, name: "Side Gate", zone: "perimeter", status: "offline", threat: null },
+      { id: 9, name: "Feeder Cam", zone: "wildlife", status: "live", threat: "animal" },
+    ];
 
-const EVENTS = [
-  { id: 1, time: "08:47", type: "vehicle", label: "Toyota Camry", plate: "7XBK492", cam: "Driveway", confidence: 0.94, thumb: null, read: false },
-  { id: 2, time: "08:31", type: "animal", label: "Squirrel #3 (Patches)", cam: "Feeder Cam", confidence: 0.88, routine: true, read: false },
-  { id: 3, time: "07:55", type: "person", label: "Person", cam: "Front-Right", confidence: 0.97, read: true },
-  { id: 4, time: "07:44", type: "animal", label: "Cardinal (male)", cam: "Feeder Cam", confidence: 0.82, read: true },
-  { id: 5, time: "07:12", type: "vehicle", label: "FedEx Truck", plate: "FL-FEDEX", cam: "Driveway", confidence: 0.91, read: true },
-  { id: 6, time: "06:38", type: "animal", label: "Raccoon", cam: "Back-Left", confidence: 0.86, read: true },
-  { id: 7, time: "03:14", type: "person", label: "Unknown Person", cam: "Side Gate", confidence: 0.79, alert: true, read: false },
-  { id: 8, time: "02:48", type: "animal", label: "Opossum", cam: "Backyard", confidence: 0.91, read: true },
-];
+    const EVENTS = [
+      { id: 1, time: "08:47", type: "vehicle", label: "Toyota Camry", plate: "7XBK492", cam: "Driveway", confidence: 0.94, thumb: null, read: false },
+      { id: 2, time: "08:31", type: "animal", label: "Squirrel #3 (Patches)", cam: "Feeder Cam", confidence: 0.88, routine: true, read: false },
+      { id: 3, time: "07:55", type: "person", label: "Person", cam: "Front-Right", confidence: 0.97, read: true },
+      { id: 4, time: "07:44", type: "animal", label: "Cardinal (male)", cam: "Feeder Cam", confidence: 0.82, read: true },
+      { id: 5, time: "07:12", type: "vehicle", label: "FedEx Truck", plate: "FL-FEDEX", cam: "Driveway", confidence: 0.91, read: true },
+      { id: 6, time: "06:38", type: "animal", label: "Raccoon", cam: "Back-Left", confidence: 0.86, read: true },
+      { id: 7, time: "03:14", type: "person", label: "Unknown Person", cam: "Side Gate", confidence: 0.79, alert: true, read: false },
+      { id: 8, time: "02:48", type: "animal", label: "Opossum", cam: "Backyard", confidence: 0.91, read: true },
+    ];
 
-const ANIMALS_TODAY = [
-  { name: "Patches (Squirrel #3)", visits: 4, lastSeen: "08:31", icon: "🐿️", routine: true },
-  { name: "Cardinal (male)", visits: 2, lastSeen: "07:44", icon: "🐦", routine: false },
-  { name: "Raccoon", visits: 1, lastSeen: "06:38", icon: "🦝", routine: false },
-  { name: "Opossum", visits: 1, lastSeen: "02:48", icon: "🐾", routine: false },
-  { name: "Blue Jay", visits: 3, lastSeen: "07:50", icon: "🐦‍⬛", routine: true },
-];
+    const ANIMALS_TODAY = [
+      { name: "Patches (Squirrel #3)", visits: 4, lastSeen: "08:31", icon: "🐿️", routine: true },
+      { name: "Cardinal (male)", visits: 2, lastSeen: "07:44", icon: "🐦", routine: false },
+      { name: "Raccoon", visits: 1, lastSeen: "06:38", icon: "🦝", routine: false },
+      { name: "Opossum", visits: 1, lastSeen: "02:48", icon: "🐾", routine: false },
+      { name: "Blue Jay", visits: 3, lastSeen: "07:50", icon: "🐦‍⬛", routine: true },
+    ];
 
-const VEHICLES_TODAY = [
-  { plate: "7XBK492", make: "Toyota Camry", visits: 2, lastSeen: "08:47", known: true, label: "Neighbor — Dave" },
-  { plate: "FL-FEDEX", make: "FedEx Truck", visits: 1, lastSeen: "07:12", known: true, label: "Delivery" },
-  { plate: "3RNZ019", make: "Unknown Sedan", visits: 1, lastSeen: "06:01", known: false, label: null },
-];
+    const VEHICLES_TODAY = [
+      { plate: "7XBK492", make: "Toyota Camry", visits: 2, lastSeen: "08:47", known: true, label: "Neighbor — Dave" },
+      { plate: "FL-FEDEX", make: "FedEx Truck", visits: 1, lastSeen: "07:12", known: true, label: "Delivery" },
+      { plate: "3RNZ019", make: "Unknown Sedan", visits: 1, lastSeen: "06:01", known: false, label: null },
+    ];
 
-const WIFI_ZONES = [
-  { zone: "Front Entry", active: false, lastMotion: "07:55", level: 0 },
-  { zone: "Living Room", active: true, lastMotion: "08:51", level: 85 },
-  { zone: "Garage", active: false, lastMotion: "07:12", level: 0 },
-  { zone: "Backyard", active: false, lastMotion: "06:38", level: 10 },
-  { zone: "Side Gate", active: false, lastMotion: "03:14", level: 5 },
-];
+    const WIFI_ZONES = [
+      { zone: "Front Entry", active: false, lastMotion: "07:55", level: 0 },
+      { zone: "Living Room", active: true, lastMotion: "08:51", level: 85 },
+      { zone: "Garage", active: false, lastMotion: "07:12", level: 0 },
+      { zone: "Backyard", active: false, lastMotion: "06:38", level: 10 },
+      { zone: "Side Gate", active: false, lastMotion: "03:14", level: 5 },
+    ];
 
-const ALERTS = [
-  { id: 1, severity: "high", message: "Unknown person at Side Gate — 3:14 AM", time: "03:14", acked: false },
-  { id: 2, severity: "medium", message: "Camera 8 (Side Gate) offline", time: "06:00", acked: false },
-  { id: 3, severity: "low", message: "Unknown vehicle (3RNZ019) passed twice", time: "06:01", acked: true },
-];
+    const ALERTS = [
+      { id: 1, severity: "high", message: "Unknown person at Side Gate — 3:14 AM", time: "03:14", acked: false },
+      { id: 2, severity: "medium", message: "Camera 8 (Side Gate) offline", time: "06:00", acked: false },
+      { id: 3, severity: "low", message: "Unknown vehicle (3RNZ019) passed twice", time: "06:01", acked: true },
+    ];
 
-const LLM_HISTORY = [
-  { role: "assistant", text: "Good morning. Here's your overnight summary: 1 anomalous person detected at 3:14 AM near the side gate — confidence 79%, no plate, departed within 4 minutes. Cam 8 went offline at ~6 AM. Patches (Squirrel #3) arrived at 8:31 on schedule — routine confirmed. All other activity nominal." },
-];
+    const LLM_HISTORY = [
+      { role: "assistant", text: "Good morning. Here's your overnight summary: 1 anomalous person detected at 3:14 AM near the side gate — confidence 79%, no plate, departed within 4 minutes. Cam 8 went offline at ~6 AM. Patches (Squirrel #3) arrived at 8:31 on schedule — routine confirmed. All other activity nominal." },
+    ];
 
-const DAILY_SUMMARY = {
-  date: "Tuesday, May 5",
-  totalEvents: 41,
-  people: 3,
-  vehicles: 6,
-  animals: 14,
-  packages: 1,
-  anomalies: 1,
-  systemHealth: 88,
-  uptime: "23h 51m",
-  recordingGB: 12.4,
-  threeDUpdated: "02:00 AM",
-};
+    const DAILY_SUMMARY = {
+      date: "Tuesday, May 5",
+      totalEvents: 41,
+      people: 3,
+      vehicles: 6,
+      animals: 14,
+      packages: 1,
+      anomalies: 1,
+      systemHealth: 88,
+      uptime: "23h 51m",
+      recordingGB: 12.4,
+      threeDUpdated: "02:00 AM",
+    };
 
-// ── PALETTE ────────────────────────────────────────────────────────────────
-const C = {
-  bg: "#070B11",
-  surface: "#0D1420",
-  card: "#111827",
-  border: "#1E2D45",
-  borderBright: "#2A4060",
-  accent: "#00D4FF",
-  accentDim: "#0099BB",
-  green: "#00FF88",
-  greenDim: "#00994D",
-  orange: "#FF8C00",
-  red: "#FF3B3B",
-  yellow: "#FFD700",
-  purple: "#A855F7",
-  text: "#E8F0FE",
-  textMid: "#8BA3C4",
-  textDim: "#4A6080",
-};
+    // ── PALETTE ────────────────────────────────────────────────────────────────
+    const C = {
+      bg: "#070B11",
+      surface: "#0D1420",
+      card: "#111827",
+      border: "#1E2D45",
+      borderBright: "#2A4060",
+      accent: "#00D4FF",
+      accentDim: "#0099BB",
+      green: "#00FF88",
+      greenDim: "#00994D",
+      orange: "#FF8C00",
+      red: "#FF3B3B",
+      yellow: "#FFD700",
+      purple: "#A855F7",
+      text: "#E8F0FE",
+      textMid: "#8BA3C4",
+      textDim: "#4A6080",
+    };
 
-// ── STYLES ─────────────────────────────────────────────────────────────────
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+    // ── STYLES ─────────────────────────────────────────────────────────────────
+    const css = `
+      @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --bg: ${C.bg}; --surface: ${C.surface}; --card: ${C.card};
-    --border: ${C.border}; --accent: ${C.accent}; --green: ${C.green};
-    --orange: ${C.orange}; --red: ${C.red}; --text: ${C.text};
-    --textMid: ${C.textMid}; --textDim: ${C.textDim};
-  }
+      :root {
+        --bg: ${C.bg}; --surface: ${C.surface}; --card: ${C.card};
+        --border: ${C.border}; --accent: ${C.accent}; --green: ${C.green};
+        --orange: ${C.orange}; --red: ${C.red}; --text: ${C.text};
+        --textMid: ${C.textMid}; --textDim: ${C.textDim};
+      }
 
-  body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+      body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; overflow-x: hidden; }
 
-  .mono { font-family: 'Space Mono', monospace; }
+      .mono { font-family: 'Space Mono', monospace; }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 2px; }
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 2px; }
 
-  /* SHELL */
-  .shell { display: flex; flex-direction: column; min-height: 100vh; max-width: 480px; margin: 0 auto; position: relative; }
+      .shell { display: flex; flex-direction: column; min-height: 100vh; max-width: 480px; margin: 0 auto; position: relative; }
 
-  /* TOP BAR */
-  .topbar {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(7,11,17,0.92); backdrop-filter: blur(12px);
-    border-bottom: 1px solid ${C.border};
-    padding: 10px 16px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .topbar-logo { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: ${C.accent}; letter-spacing: 2px; }
-  .topbar-logo span { color: ${C.textDim}; }
-  .topbar-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${C.textMid}; }
-  .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: ${C.green}; box-shadow: 0 0 6px ${C.green}; animation: pulse 2s infinite; }
-  .pulse-dot.red { background: ${C.red}; box-shadow: 0 0 6px ${C.red}; }
-  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+      .topbar {
+        position: sticky; top: 0; z-index: 100;
+        background: rgba(7,11,17,0.92); backdrop-filter: blur(12px);
+        border-bottom: 1px solid ${C.border};
+        padding: 10px 16px;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .topbar-logo { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: ${C.accent}; letter-spacing: 2px; }
+      .topbar-logo span { color: ${C.textDim}; }
+      .topbar-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: ${C.textMid}; }
+      .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: ${C.green}; box-shadow: 0 0 6px ${C.green}; animation: pulse 2s infinite; }
+      .pulse-dot.red { background: ${C.red}; box-shadow: 0 0 6px ${C.red}; }
+      @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
-  /* BOTTOM NAV */
-  .bottomnav {
-    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 480px; z-index: 100;
-    background: rgba(13,20,32,0.96); backdrop-filter: blur(16px);
-    border-top: 1px solid ${C.border};
-    display: flex;
-  }
-  .nav-item {
-    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: 10px 4px 12px; gap: 3px; cursor: pointer; transition: all 0.2s;
-    font-size: 10px; color: ${C.textDim}; font-weight: 500; letter-spacing: 0.5px;
-    position: relative; border: none; background: none;
-  }
-  .nav-item.active { color: ${C.accent}; }
-  .nav-item.active .nav-icon { color: ${C.accent}; }
-  .nav-icon { font-size: 20px; line-height: 1; }
-  .nav-badge {
-    position: absolute; top: 6px; right: calc(50% - 16px);
-    background: ${C.red}; color: white; font-size: 9px; font-weight: 700;
-    border-radius: 8px; padding: 1px 5px; min-width: 16px; text-align: center;
-  }
+      .bottomnav {
+        position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+        width: 100%; max-width: 480px; z-index: 100;
+        background: rgba(13,20,32,0.96); backdrop-filter: blur(16px);
+        border-top: 1px solid ${C.border};
+        display: flex;
+      }
+      .nav-item {
+        flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: 10px 4px 12px; gap: 3px; cursor: pointer; transition: all 0.2s;
+        font-size: 10px; color: ${C.textDim}; font-weight: 500; letter-spacing: 0.5px;
+        position: relative; border: none; background: none;
+      }
+      .nav-item.active { color: ${C.accent}; }
+      .nav-item.active .nav-icon { color: ${C.accent}; }
+      .nav-icon { font-size: 20px; line-height: 1; }
+      .nav-badge {
+        position: absolute; top: 6px; right: calc(50% - 16px);
+        background: ${C.red}; color: white; font-size: 9px; font-weight: 700;
+        border-radius: 8px; padding: 1px 5px; min-width: 16px; text-align: center;
+      }
 
-  /* CONTENT */
-  .content { flex: 1; padding: 12px 12px 90px; display: flex; flex-direction: column; gap: 12px; }
+      .content { flex: 1; padding: 12px 12px 90px; display: flex; flex-direction: column; gap: 12px; }
 
-  /* CARD */
-  .card {
-    background: ${C.card}; border: 1px solid ${C.border};
-    border-radius: 14px; overflow: hidden;
-  }
-  .card-header {
-    padding: 12px 14px 10px; display: flex; align-items: center; justify-content: space-between;
-    border-bottom: 1px solid ${C.border};
-  }
-  .card-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: ${C.textMid}; text-transform: uppercase; }
-  .card-badge { font-size: 10px; font-family: 'Space Mono', monospace; color: ${C.accent}; background: rgba(0,212,255,0.1); padding: 2px 8px; border-radius: 20px; }
+      .card { background: ${C.card}; border: 1px solid ${C.border}; border-radius: 14px; overflow: hidden; }
+      .card-header { padding: 12px 14px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid ${C.border}; }
+      .card-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: ${C.textMid}; text-transform: uppercase; }
+      .card-badge { font-size: 10px; font-family: 'Space Mono', monospace; color: ${C.accent}; background: rgba(0,212,255,0.1); padding: 2px 8px; border-radius: 20px; }
 
-  /* HERO SUMMARY */
-  .hero {
-    background: linear-gradient(135deg, #0D1F35 0%, #071525 60%, #0A1A2E 100%);
-    border: 1px solid ${C.borderBright}; border-radius: 16px; padding: 16px;
-    position: relative; overflow: hidden;
-  }
-  .hero::before {
-    content: ''; position: absolute; top: -40px; right: -40px;
-    width: 180px; height: 180px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
-  }
-  .hero-date { font-size: 11px; color: ${C.textDim}; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; font-family: 'Space Mono', monospace; }
-  .hero-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
-  .hero-title .ok { color: ${C.green}; }
-  .hero-title .warn { color: ${C.orange}; }
-  .hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .hero-stat {
-    background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 8px;
-    text-align: center; border: 1px solid rgba(255,255,255,0.04);
-  }
-  .hero-stat-val { font-size: 24px; font-weight: 800; font-family: 'Space Mono', monospace; line-height: 1; }
-  .hero-stat-lbl { font-size: 10px; color: ${C.textDim}; margin-top: 3px; letter-spacing: 0.5px; }
-  .hero-stat-val.people { color: ${C.accent}; }
-  .hero-stat-val.vehicles { color: ${C.orange}; }
-  .hero-stat-val.animals { color: ${C.green}; }
-  .hero-stat-val.alert { color: ${C.red}; }
-  .hero-stat-val.ok { color: ${C.textMid}; }
-  .hero-bottom { display: flex; gap: 8px; margin-top: 10px; }
-  .hero-chip {
-    font-size: 10px; padding: 4px 10px; border-radius: 20px; font-family: 'Space Mono', monospace;
-    background: rgba(0,0,0,0.4); border: 1px solid ${C.border};
-  }
-  .hero-chip.green { border-color: ${C.greenDim}; color: ${C.green}; }
-  .hero-chip.orange { border-color: rgba(255,140,0,0.4); color: ${C.orange}; }
+      .hero {
+        background: linear-gradient(135deg, #0D1F35 0%, #071525 60%, #0A1A2E 100%);
+        border: 1px solid ${C.borderBright}; border-radius: 16px; padding: 16px;
+        position: relative; overflow: hidden;
+      }
+      .hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%); }
+      .hero-date { font-size: 11px; color: ${C.textDim}; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; font-family: 'Space Mono', monospace; }
+      .hero-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+      .hero-title .ok { color: ${C.green}; }
+      .hero-title .warn { color: ${C.orange}; }
+      .hero-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .hero-stat { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px 8px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
+      .hero-stat-val { font-size: 24px; font-weight: 800; font-family: 'Space Mono', monospace; line-height: 1; }
+      .hero-stat-lbl { font-size: 10px; color: ${C.textDim}; margin-top: 3px; letter-spacing: 0.5px; }
+      .hero-stat-val.people { color: ${C.accent}; }
+      .hero-stat-val.vehicles { color: ${C.orange}; }
+      .hero-stat-val.animals { color: ${C.green}; }
+      .hero-stat-val.alert { color: ${C.red}; }
+      .hero-stat-val.ok { color: ${C.textMid}; }
+      .hero-bottom { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+      .hero-chip { font-size: 10px; padding: 4px 10px; border-radius: 20px; font-family: 'Space Mono', monospace; background: rgba(0,0,0,0.4); border: 1px solid ${C.border}; }
+      .hero-chip.green { border-color: ${C.greenDim}; color: ${C.green}; }
+      .hero-chip.orange { border-color: rgba(255,140,0,0.4); color: ${C.orange}; }
 
-  /* ALERT STRIP */
-  .alert-strip {
-    border-radius: 10px; padding: 10px 12px;
-    display: flex; align-items: flex-start; gap: 10px;
-    border: 1px solid;
-  }
-  .alert-strip.high { background: rgba(255,59,59,0.08); border-color: rgba(255,59,59,0.3); }
-  .alert-strip.medium { background: rgba(255,140,0,0.08); border-color: rgba(255,140,0,0.3); }
-  .alert-strip.low { background: rgba(255,215,0,0.06); border-color: rgba(255,215,0,0.2); }
-  .alert-icon { font-size: 18px; line-height: 1; margin-top: 1px; }
-  .alert-text { flex: 1; }
-  .alert-msg { font-size: 13px; font-weight: 500; }
-  .alert-strip.high .alert-msg { color: ${C.red}; }
-  .alert-strip.medium .alert-msg { color: ${C.orange}; }
-  .alert-strip.low .alert-msg { color: ${C.yellow}; }
-  .alert-time { font-size: 10px; color: ${C.textDim}; font-family: 'Space Mono', monospace; margin-top: 2px; }
-  .alert-ack { font-size: 10px; padding: 3px 8px; border-radius: 6px; border: 1px solid ${C.border}; background: none; color: ${C.textDim}; cursor: pointer; }
+      .alert-strip { border-radius: 10px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; border: 1px solid; }
+      .alert-strip.high { background: rgba(255,59,59,0.08); border-color: rgba(255,59,59,0.3); }
+      .alert-strip.medium { background: rgba(255,140,0,0.08); border-color: rgba(255,140,0,0.3); }
+      .alert-strip.low { background: rgba(255,215,0,0.06); border-color: rgba(255,215,0,0.2); }
+      .alert-icon { font-size: 18px; line-height: 1; margin-top: 1px; }
+      .alert-text { flex: 1; }
+      .alert-msg { font-size: 13px; font-weight: 500; }
+      .alert-strip.high .alert-msg { color: ${C.red}; }
+      .alert-strip.medium .alert-msg { color: ${C.orange}; }
+      .alert-strip.low .alert-msg { color: ${C.yellow}; }
+      .alert-time { font-size: 10px; color: ${C.textDim}; font-family: 'Space Mono', monospace; margin-top: 2px; }
+      .alert-ack { font-size: 10px; padding: 3px 8px; border-radius: 6px; border: 1px solid ${C.border}; background: none; color: ${C.textDim}; cursor: pointer; }
 
-  /* CAM GRID */
-  .cam-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; }
-  .cam-cell {
-    aspect-ratio: 16/10; border-radius: 8px; position: relative;
-    overflow: hidden; cursor: pointer; border: 1.5px solid ${C.border};
-    background: #050A10; transition: border-color 0.2s;
-  }
-  .cam-cell:hover { border-color: ${C.accent}; }
-  .cam-cell.active-threat { border-color: ${C.orange}; box-shadow: 0 0 12px rgba(255,140,0,0.3); animation: camPulse 2s infinite; }
-  .cam-cell.offline { opacity: 0.4; }
-  @keyframes camPulse { 0%,100% { box-shadow: 0 0 8px rgba(255,140,0,0.2); } 50% { box-shadow: 0 0 16px rgba(255,140,0,0.5); } }
-  .cam-visual { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
-  .cam-scene { position: absolute; inset: 0; }
-  .cam-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px 5px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); }
-  .cam-name { font-size: 8px; font-weight: 700; color: white; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cam-tag { font-size: 7px; color: ${C.orange}; font-family: 'Space Mono', monospace; }
-  .cam-dot { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; }
-  .cam-dot.live { background: ${C.red}; animation: pulse 1.5s infinite; }
-  .cam-dot.offline { background: ${C.textDim}; }
+      .cam-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 10px; }
+      .cam-cell { aspect-ratio: 16/10; border-radius: 8px; position: relative; overflow: hidden; cursor: pointer; border: 1.5px solid ${C.border}; background: #050A10; transition: border-color 0.2s; }
+      .cam-cell:hover { border-color: ${C.accent}; }
+      .cam-cell.active-threat { border-color: ${C.orange}; box-shadow: 0 0 12px rgba(255,140,0,0.3); animation: camPulse 2s infinite; }
+      .cam-cell.offline { opacity: 0.4; }
+      @keyframes camPulse { 0%,100% { box-shadow: 0 0 8px rgba(255,140,0,0.2); } 50% { box-shadow: 0 0 16px rgba(255,140,0,0.5); } }
+      .cam-visual { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+      .cam-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px 5px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); }
+      .cam-name { font-size: 8px; font-weight: 700; color: white; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .cam-tag { font-size: 7px; color: ${C.orange}; font-family: 'Space Mono', monospace; }
+      .cam-dot { position: absolute; top: 4px; right: 4px; width: 5px; height: 5px; border-radius: 50%; }
+      .cam-dot.live { background: ${C.red}; animation: pulse 1.5s infinite; }
+      .cam-dot.offline { background: ${C.textDim}; }
 
-  /* SCENE SIMULATIONS */
-  .scene-sky { background: linear-gradient(180deg, #0A1628 0%, #152240 100%); }
-  .scene-night { background: linear-gradient(180deg, #050D18 0%, #0A1525 100%); }
-  .scene-dawn { background: linear-gradient(180deg, #1A1025 0%, #2D1A10 50%, #0A1520 100%); }
-  .scene-drive { background: linear-gradient(180deg, #080F1A 0%, #0D1828 50%, #060E18 100%); }
+      .event-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid ${C.border}; cursor: pointer; transition: background 0.15s; }
+      .event-row:hover { background: rgba(255,255,255,0.02); }
+      .event-row:last-child { border-bottom: none; }
+      .event-row.unread { background: rgba(0,212,255,0.03); }
+      .event-icon-wrap { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+      .event-icon-wrap.person { background: rgba(0,212,255,0.12); }
+      .event-icon-wrap.vehicle { background: rgba(255,140,0,0.12); }
+      .event-icon-wrap.animal { background: rgba(0,255,136,0.10); }
+      .event-icon-wrap.alert-ev { background: rgba(255,59,59,0.12); }
+      .event-main { flex: 1; min-width: 0; }
+      .event-label { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .event-label .alert-flag { color: ${C.red}; font-size: 11px; margin-left: 4px; }
+      .event-meta { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
+      .event-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+      .event-time { font-size: 10px; font-family: 'Space Mono', monospace; color: ${C.textDim}; }
+      .event-conf { font-size: 9px; color: ${C.green}; background: rgba(0,255,136,0.08); padding: 1px 6px; border-radius: 8px; }
+      .event-unread-dot { width: 6px; height: 6px; border-radius: 50%; background: ${C.accent}; }
 
-  /* EVENTS LIST */
-  .event-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; border-bottom: 1px solid ${C.border}; cursor: pointer;
-    transition: background 0.15s;
-  }
-  .event-row:hover { background: rgba(255,255,255,0.02); }
-  .event-row:last-child { border-bottom: none; }
-  .event-row.unread { background: rgba(0,212,255,0.03); }
-  .event-icon-wrap {
-    width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
-  }
-  .event-icon-wrap.person { background: rgba(0,212,255,0.12); }
-  .event-icon-wrap.vehicle { background: rgba(255,140,0,0.12); }
-  .event-icon-wrap.animal { background: rgba(0,255,136,0.10); }
-  .event-icon-wrap.alert-ev { background: rgba(255,59,59,0.12); }
-  .event-main { flex: 1; min-width: 0; }
-  .event-label { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .event-label .alert-flag { color: ${C.red}; font-size: 11px; margin-left: 4px; }
-  .event-meta { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
-  .event-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
-  .event-time { font-size: 10px; font-family: 'Space Mono', monospace; color: ${C.textDim}; }
-  .event-conf { font-size: 9px; color: ${C.green}; background: rgba(0,255,136,0.08); padding: 1px 6px; border-radius: 8px; }
-  .event-unread-dot { width: 6px; height: 6px; border-radius: 50%; background: ${C.accent}; }
+      .plate-badge { font-family: 'Space Mono', monospace; font-size: 10px; background: rgba(255,140,0,0.12); color: ${C.orange}; padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,140,0,0.25); display: inline-block; margin-left: 4px; }
 
-  /* PLATE BADGE */
-  .plate-badge { font-family: 'Space Mono', monospace; font-size: 10px; background: rgba(255,140,0,0.12); color: ${C.orange}; padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,140,0,0.25); display: inline-block; margin-left: 4px; }
+      .animal-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid ${C.border}; }
+      .animal-row:last-child { border-bottom: none; }
+      .animal-emoji { font-size: 24px; }
+      .animal-name { font-size: 13px; font-weight: 600; }
+      .animal-visits { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
+      .animal-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+      .routine-badge { font-size: 9px; color: ${C.green}; background: rgba(0,255,136,0.1); padding: 1px 7px; border-radius: 10px; border: 1px solid rgba(0,255,136,0.2); }
+      .new-badge { font-size: 9px; color: ${C.orange}; background: rgba(255,140,0,0.1); padding: 1px 7px; border-radius: 10px; border: 1px solid rgba(255,140,0,0.2); }
 
-  /* ANIMALS */
-  .animal-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid ${C.border}; }
-  .animal-row:last-child { border-bottom: none; }
-  .animal-emoji { font-size: 24px; }
-  .animal-name { font-size: 13px; font-weight: 600; }
-  .animal-visits { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
-  .animal-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-  .routine-badge { font-size: 9px; color: ${C.green}; background: rgba(0,255,136,0.1); padding: 1px 7px; border-radius: 10px; border: 1px solid rgba(0,255,136,0.2); }
-  .new-badge { font-size: 9px; color: ${C.orange}; background: rgba(255,140,0,0.1); padding: 1px 7px; border-radius: 10px; border: 1px solid rgba(255,140,0,0.2); }
+      .vehicle-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid ${C.border}; }
+      .vehicle-row:last-child { border-bottom: none; }
+      .vehicle-plate-big { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.05); border: 1px solid ${C.border}; padding: 4px 8px; border-radius: 6px; min-width: 80px; text-align: center; }
+      .vehicle-plate-big.unknown { border-color: rgba(255,59,59,0.3); color: ${C.red}; }
+      .vehicle-info { flex: 1; }
+      .vehicle-make { font-size: 13px; font-weight: 600; }
+      .vehicle-label { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
 
-  /* VEHICLE ROWS */
-  .vehicle-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid ${C.border}; }
-  .vehicle-row:last-child { border-bottom: none; }
-  .vehicle-plate-big { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.05); border: 1px solid ${C.border}; padding: 4px 8px; border-radius: 6px; min-width: 80px; text-align: center; }
-  .vehicle-plate-big.unknown { border-color: rgba(255,59,59,0.3); color: ${C.red}; }
-  .vehicle-info { flex: 1; }
-  .vehicle-make { font-size: 13px; font-weight: 600; }
-  .vehicle-label { font-size: 10px; color: ${C.textDim}; margin-top: 1px; }
+      .wifi-zone { padding: 10px 14px; border-bottom: 1px solid ${C.border}; display: flex; align-items: center; gap: 10px; }
+      .wifi-zone:last-child { border-bottom: none; }
+      .wifi-name { font-size: 13px; font-weight: 500; flex: 1; }
+      .wifi-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
+      .wifi-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, ${C.accent}, ${C.green}); transition: width 1s; }
+      .wifi-status { font-size: 10px; font-family: 'Space Mono', monospace; width: 52px; text-align: right; }
+      .wifi-status.active { color: ${C.green}; }
+      .wifi-status.inactive { color: ${C.textDim}; }
 
-  /* WIFI ZONES */
-  .wifi-zone { padding: 10px 14px; border-bottom: 1px solid ${C.border}; display: flex; align-items: center; gap: 10px; }
-  .wifi-zone:last-child { border-bottom: none; }
-  .wifi-name { font-size: 13px; font-weight: 500; flex: 1; }
-  .wifi-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; }
-  .wifi-bar { height: 100%; border-radius: 2px; background: linear-gradient(90deg, ${C.accent}, ${C.green}); transition: width 1s; }
-  .wifi-status { font-size: 10px; font-family: 'Space Mono', monospace; width: 52px; text-align: right; }
-  .wifi-status.active { color: ${C.green}; }
-  .wifi-status.inactive { color: ${C.textDim}; }
+      .sys-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 12px; }
+      .sys-stat { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.04); }
+      .sys-val { font-size: 20px; font-weight: 800; font-family: 'Space Mono', monospace; }
+      .sys-val.green { color: ${C.green}; }
+      .sys-val.orange { color: ${C.orange}; }
+      .sys-val.accent { color: ${C.accent}; }
+      .sys-lbl { font-size: 10px; color: ${C.textDim}; margin-top: 3px; }
+      .health-bar-wrap { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+      .health-bar { height: 100%; border-radius: 2px; }
+      .health-bar.good { background: linear-gradient(90deg, ${C.greenDim}, ${C.green}); }
+      .health-bar.warn { background: linear-gradient(90deg, #996600, ${C.orange}); }
 
-  /* SYSTEM HEALTH */
-  .sys-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 12px; }
-  .sys-stat { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 12px; border: 1px solid rgba(255,255,255,0.04); }
-  .sys-val { font-size: 20px; font-weight: 800; font-family: 'Space Mono', monospace; }
-  .sys-val.green { color: ${C.green}; }
-  .sys-val.orange { color: ${C.orange}; }
-  .sys-val.accent { color: ${C.accent}; }
-  .sys-lbl { font-size: 10px; color: ${C.textDim}; margin-top: 3px; }
-  .health-bar-wrap { height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-  .health-bar { height: 100%; border-radius: 2px; }
-  .health-bar.good { background: linear-gradient(90deg, ${C.greenDim}, ${C.green}); }
-  .health-bar.warn { background: linear-gradient(90deg, #996600, ${C.orange}); }
+      .threedgs { margin: 10px; border-radius: 10px; overflow: hidden; background: linear-gradient(135deg, #050D18 0%, #0A1628 100%); border: 1px solid ${C.border}; height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; position: relative; }
+      .threedgs-label { font-size: 12px; color: ${C.textMid}; font-weight: 600; letter-spacing: 1px; }
+      .threedgs-sub { font-size: 10px; color: ${C.textDim}; font-family: 'Space Mono', monospace; }
+      .threedgs-btn { margin-top: 8px; padding: 6px 16px; border-radius: 8px; background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.3); color: ${C.accent}; font-size: 11px; font-weight: 600; cursor: pointer; }
+      .orbit-ring { position: absolute; width: 140px; height: 70px; border: 1px solid rgba(0,212,255,0.15); border-radius: 50%; animation: orbit 8s linear infinite; }
+      .orbit-ring2 { width: 100px; height: 50px; border-color: rgba(0,255,136,0.1); animation-duration: 12s; animation-direction: reverse; }
+      .orbit-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: ${C.accent}; top: -2.5px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 6px ${C.accent}; }
+      @keyframes orbit { from { transform: rotateX(60deg) rotate(0deg); } to { transform: rotateX(60deg) rotate(360deg); } }
 
-  /* 3DGS PLACEHOLDER */
-  .threedgs {
-    margin: 10px; border-radius: 10px; overflow: hidden;
-    background: linear-gradient(135deg, #050D18 0%, #0A1628 100%);
-    border: 1px solid ${C.border}; height: 200px;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 8px; position: relative;
-  }
-  .threedgs-label { font-size: 12px; color: ${C.textMid}; font-weight: 600; letter-spacing: 1px; }
-  .threedgs-sub { font-size: 10px; color: ${C.textDim}; font-family: 'Space Mono', monospace; }
-  .threedgs-btn {
-    margin-top: 8px; padding: 6px 16px; border-radius: 8px;
-    background: rgba(0,212,255,0.12); border: 1px solid rgba(0,212,255,0.3);
-    color: ${C.accent}; font-size: 11px; font-weight: 600; cursor: pointer;
-  }
-  .orbit-ring {
-    position: absolute; width: 140px; height: 70px;
-    border: 1px solid rgba(0,212,255,0.15); border-radius: 50%;
-    animation: orbit 8s linear infinite;
-  }
-  .orbit-ring2 { width: 100px; height: 50px; border-color: rgba(0,255,136,0.1); animation-duration: 12s; animation-direction: reverse; }
-  .orbit-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: ${C.accent}; top: -2.5px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 6px ${C.accent}; }
-  @keyframes orbit { from { transform: rotateX(60deg) rotate(0deg); } to { transform: rotateX(60deg) rotate(360deg); } }
+      .drone-card { margin: 10px; border-radius: 10px; overflow: hidden; background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.2); padding: 14px; }
+      .drone-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+      .drone-title { font-size: 13px; font-weight: 700; color: ${C.purple}; }
+      .drone-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(168,85,247,0.3); color: ${C.purple}; font-family: 'Space Mono', monospace; }
+      .drone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+      .drone-stat { text-align: center; }
+      .drone-stat-val { font-size: 16px; font-weight: 800; color: ${C.purple}; font-family: 'Space Mono', monospace; }
+      .drone-stat-lbl { font-size: 9px; color: ${C.textDim}; margin-top: 2px; }
+      .drone-btn { width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: ${C.purple}; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
 
-  /* DRONE */
-  .drone-card {
-    margin: 10px; border-radius: 10px; overflow: hidden;
-    background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.2);
-    padding: 14px;
-  }
-  .drone-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .drone-title { font-size: 13px; font-weight: 700; color: ${C.purple}; }
-  .drone-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(168,85,247,0.3); color: ${C.purple}; font-family: 'Space Mono', monospace; }
-  .drone-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .drone-stat { text-align: center; }
-  .drone-stat-val { font-size: 16px; font-weight: 800; color: ${C.purple}; font-family: 'Space Mono', monospace; }
-  .drone-stat-lbl { font-size: 9px; color: ${C.textDim}; margin-top: 2px; }
-  .drone-btn { width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); color: ${C.purple}; font-size: 12px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
+      .chat-messages { padding: 12px; display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
+      .chat-bubble { max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+      .chat-bubble.assistant { background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.15); color: ${C.text}; align-self: flex-start; border-radius: 4px 12px 12px 12px; }
+      .chat-bubble.user { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); color: ${C.text}; align-self: flex-end; border-radius: 12px 4px 12px 12px; }
+      .chat-who { font-size: 9px; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
+      .chat-who.ai { color: ${C.accent}; }
+      .chat-who.me { color: ${C.textDim}; }
+      .chat-input-row { display: flex; gap: 8px; padding: 0 12px 12px; }
+      .chat-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid ${C.border}; border-radius: 10px; padding: 9px 12px; color: ${C.text}; font-size: 13px; font-family: 'Outfit', sans-serif; outline: none; }
+      .chat-input:focus { border-color: rgba(0,212,255,0.4); }
+      .chat-input::placeholder { color: ${C.textDim}; }
+      .chat-send { width: 38px; height: 38px; border-radius: 10px; background: rgba(0,212,255,0.15); border: 1px solid rgba(0,212,255,0.3); color: ${C.accent}; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+      .chat-thinking { display: flex; gap: 4px; padding: 4px 0; }
+      .chat-thinking span { width: 6px; height: 6px; border-radius: 50%; background: ${C.accent}; opacity: 0.4; animation: think 1.4s infinite; }
+      .chat-thinking span:nth-child(2) { animation-delay: 0.2s; }
+      .chat-thinking span:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes think { 0%,80%,100% { opacity:0.2; transform: scale(0.8); } 40% { opacity:1; transform: scale(1.1); } }
 
-  /* LLM CHAT */
-  .chat-messages { padding: 12px; display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; }
-  .chat-bubble {
-    max-width: 85%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5;
-  }
-  .chat-bubble.assistant {
-    background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.15);
-    color: ${C.text}; align-self: flex-start; border-radius: 4px 12px 12px 12px;
-  }
-  .chat-bubble.user {
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
-    color: ${C.text}; align-self: flex-end; border-radius: 12px 4px 12px 12px;
-  }
-  .chat-who { font-size: 9px; letter-spacing: 1px; font-weight: 700; margin-bottom: 4px; }
-  .chat-who.ai { color: ${C.accent}; }
-  .chat-who.me { color: ${C.textDim}; }
-  .chat-input-row { display: flex; gap: 8px; padding: 0 12px 12px; }
-  .chat-input {
-    flex: 1; background: rgba(255,255,255,0.04); border: 1px solid ${C.border};
-    border-radius: 10px; padding: 9px 12px; color: ${C.text}; font-size: 13px;
-    font-family: 'Outfit', sans-serif; outline: none;
-  }
-  .chat-input:focus { border-color: rgba(0,212,255,0.4); }
-  .chat-input::placeholder { color: ${C.textDim}; }
-  .chat-send { width: 38px; height: 38px; border-radius: 10px; background: rgba(0,212,255,0.15); border: 1px solid rgba(0,212,255,0.3); color: ${C.accent}; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .chat-thinking { display: flex; gap: 4px; padding: 4px 0; }
-  .chat-thinking span { width: 6px; height: 6px; border-radius: 50%; background: ${C.accent}; opacity: 0.4; animation: think 1.4s infinite; }
-  .chat-thinking span:nth-child(2) { animation-delay: 0.2s; }
-  .chat-thinking span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes think { 0%,80%,100% { opacity:0.2; transform: scale(0.8); } 40% { opacity:1; transform: scale(1.1); } }
+      .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: ${C.textDim}; text-transform: uppercase; padding: 0 2px; margin-bottom: 8px; }
 
-  /* TABS */
-  .tabs { display: flex; padding: 0 12px; gap: 4px; border-bottom: 1px solid ${C.border}; }
-  .tab { padding: 10px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; color: ${C.textDim}; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
-  .tab.active { color: ${C.accent}; border-bottom-color: ${C.accent}; }
+      .filter-row { display: flex; gap: 6px; padding: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
+      .filter-row::-webkit-scrollbar { display: none; }
+      .filter-chip { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; border: 1px solid ${C.border}; color: ${C.textDim}; background: transparent; transition: all 0.15s; }
+      .filter-chip.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.4); color: ${C.accent}; }
 
-  /* SECTION LABEL */
-  .section-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: ${C.textDim}; text-transform: uppercase; padding: 0 2px; }
+      .cam-full-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.96); display: flex; flex-direction: column; }
+      .cam-full-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid ${C.border}; }
+      .cam-full-title { font-size: 15px; font-weight: 700; }
+      .cam-full-close { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.08); border: none; color: white; font-size: 16px; cursor: pointer; }
+      .cam-full-view { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+      .cam-full-screen { width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; border: 1px solid ${C.border}; position: relative; }
+      .cam-full-info { padding: 12px 16px; display: flex; gap: 10px; flex-wrap: wrap; }
+      .cam-info-chip { padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+      .cam-info-chip.live { background: rgba(255,59,59,0.15); color: ${C.red}; border: 1px solid rgba(255,59,59,0.3); }
+      .cam-info-chip.res { background: rgba(0,212,255,0.1); color: ${C.accent}; border: 1px solid rgba(0,212,255,0.25); }
+    `;
 
-  /* FILTER ROW */
-  .filter-row { display: flex; gap: 6px; padding: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .filter-chip { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; border: 1px solid ${C.border}; color: ${C.textDim}; background: transparent; transition: all 0.15s; }
-  .filter-chip.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.4); color: ${C.accent}; }
+    function CamScene({ cam, full = false }) {
+      const scenes = {
+        1: { type: "night-sky", label: "Clear night — no motion" },
+        2: { type: "night-sky", label: "Clear" },
+        3: { type: "driveway", label: "Vehicle detected" },
+        4: { type: "entry", label: "Clear — porch light on" },
+        5: { type: "backyard-night", label: "Animal motion" },
+        6: { type: "backyard-night", label: "Clear" },
+        7: { type: "yard", label: "Raccoon detected 06:38" },
+        8: { type: "offline", label: "OFFLINE" },
+        9: { type: "feeder", label: "Squirrel active" },
+      };
+      const s = scenes[cam.id] || scenes[1];
 
-  /* TOGGLE BTN */
-  .toggle-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid ${C.border}; background: transparent; color: ${C.textMid}; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-  .toggle-btn.on { border-color: rgba(0,255,136,0.4); color: ${C.green}; background: rgba(0,255,136,0.08); }
+      const sceneStyle = { width: "100%", height: "100%", position: "relative", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" };
 
-  /* CAM FULL */
-  .cam-full-overlay {
-    position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.96);
-    display: flex; flex-direction: column;
-  }
-  .cam-full-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid ${C.border}; }
-  .cam-full-title { font-size: 15px; font-weight: 700; }
-  .cam-full-close { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.08); border: none; color: white; font-size: 16px; cursor: pointer; }
-  .cam-full-view { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .cam-full-screen { width: 100%; aspect-ratio: 16/9; border-radius: 12px; overflow: hidden; border: 1px solid ${C.border}; position: relative; }
-  .cam-full-info { padding: 12px 16px; display: flex; gap: 10px; }
-  .cam-info-chip { padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 600; }
-  .cam-info-chip.live { background: rgba(255,59,59,0.15); color: ${C.red}; border: 1px solid rgba(255,59,59,0.3); }
-  .cam-info-chip.res { background: rgba(0,212,255,0.1); color: ${C.accent}; border: 1px solid rgba(0,212,255,0.25); }
-`;
+      const backgrounds = {
+        "night-sky": "linear-gradient(180deg, #050A18 0%, #0A1525 60%, #0D1A30 100%)",
+        "driveway": "linear-gradient(180deg, #080F1A 0%, #0D1828 50%, #060E18 100%)",
+        "entry": "linear-gradient(180deg, #0A1220 0%, #141F35 100%)",
+        "backyard-night": "linear-gradient(180deg, #050A15 0%, #080F20 100%)",
+        "yard": "linear-gradient(180deg, #060B18 0%, #0C1525 100%)",
+        "feeder": "linear-gradient(180deg, #040A14 0%, #071020 100%)",
+        "offline": "#070B11",
+      };
 
-// ── CAMERA SCENE COMPONENT ─────────────────────────────────────────────────
-function CamScene({ cam, full = false }) {
-  const scenes = {
-    1: { type: "night-sky", label: "Clear night — no motion" },
-    2: { type: "night-sky", label: "Clear" },
-    3: { type: "driveway", label: "Vehicle detected" },
-    4: { type: "entry", label: "Clear — porch light on" },
-    5: { type: "backyard-night", label: "Animal motion" },
-    6: { type: "backyard-night", label: "Clear" },
-    7: { type: "yard", label: "Raccoon detected 06:38" },
-    8: { type: "offline", label: "OFFLINE" },
-    9: { type: "feeder", label: "Squirrel active" },
-  };
-  const s = scenes[cam.id] || scenes[1];
+      const overlayEmoji = { "driveway": "🚗", "backyard-night": "🦝", "feeder": "🐿️", "yard": "🦝" };
 
-  const sceneStyle = {
-    width: "100%", height: "100%", position: "relative",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    overflow: "hidden",
-  };
-
-  const backgrounds = {
-    "night-sky": "linear-gradient(180deg, #050A18 0%, #0A1525 60%, #0D1A30 100%)",
-    "driveway": "linear-gradient(180deg, #080F1A 0%, #0D1828 50%, #060E18 100%)",
-    "entry": "linear-gradient(180deg, #0A1220 0%, #141F35 100%)",
-    "backyard-night": "linear-gradient(180deg, #050A15 0%, #080F20 100%)",
-    "yard": "linear-gradient(180deg, #060B18 0%, #0C1525 100%)",
-    "feeder": "linear-gradient(180deg, #040A14 0%, #071020 100%)",
-    "offline": "#070B11",
-  };
-
-  const overlayEmoji = {
-    "driveway": "🚗",
-    "backyard-night": "🦝",
-    "feeder": "🐿️",
-    "yard": "🦝",
-  };
-
-  return (
-    <div style={{ ...sceneStyle, background: backgrounds[s.type] || backgrounds["night-sky"] }}>
-      {/* IR scanline effect */}
-      <div style={{
-        position: "absolute", inset: 0, opacity: 0.04,
-        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px)",
-        pointerEvents: "none",
-      }} />
-      {/* Stars */}
-      {[...Array(full ? 30 : 10)].map((_, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          width: Math.random() > 0.8 ? 2 : 1, height: Math.random() > 0.8 ? 2 : 1,
-          borderRadius: "50%", background: "white",
-          top: `${Math.random() * 60}%`, left: `${Math.random() * 100}%`,
-          opacity: Math.random() * 0.6 + 0.2,
-        }} />
-      ))}
-      {/* Ground */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0,
-        height: "35%", background: "rgba(0,0,0,0.5)",
-        borderTop: "1px solid rgba(255,255,255,0.04)",
-      }} />
-      {/* Detected object emoji */}
-      {overlayEmoji[s.type] && (
-        <div style={{ position: "absolute", bottom: "30%", fontSize: full ? 32 : 14, opacity: 0.8 }}>
-          {overlayEmoji[s.type]}
+      return (
+        <div style={{ ...sceneStyle, background: backgrounds[s.type] }}>
+          <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.5) 2px, rgba(255,255,255,0.5) 3px)", pointerEvents: "none" }} />
+          {[...Array(full ? 30 : 10)].map((_, i) => (
+            <div key={i} style={{ position: "absolute", width: Math.random() > 0.8 ? 2 : 1, height: Math.random() > 0.8 ? 2 : 1, borderRadius: "50%", background: "white", top: `${Math.random() * 60}%`, left: `${Math.random() * 100}%`, opacity: Math.random() * 0.6 + 0.2 }} />
+          ))}
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "35%", background: "rgba(0,0,0,0.5)", borderTop: "1px solid rgba(255,255,255,0.04)" }} />
+          {overlayEmoji[s.type] && <div style={{ position: "absolute", bottom: "30%", fontSize: full ? 32 : 14, opacity: 0.8 }}>{overlayEmoji[s.type]}</div>}
+          {!full && <div style={{ position: "absolute", top: 4, left: 4, fontSize: 6, fontFamily: "'Space Mono', monospace", color: "rgba(0,255,136,0.7)" }}>{new Date().toLocaleTimeString("en-US", { hour12: false })}</div>}
+          {s.type === "offline" && <div style={{ color: C.textDim, fontSize: full ? 16 : 9, fontWeight: 700, letterSpacing: 2 }}>OFFLINE</div>}
         </div>
-      )}
-      {/* IR timestamp */}
-      {!full && (
-        <div style={{ position: "absolute", top: 4, left: 4, fontSize: 6, fontFamily: "'Space Mono', monospace", color: "rgba(0,255,136,0.7)" }}>
-          {new Date().toLocaleTimeString("en-US", { hour12: false })}
-        </div>
-      )}
-      {s.type === "offline" && (
-        <div style={{ color: C.textDim, fontSize: full ? 16 : 9, fontWeight: 700, letterSpacing: 2 }}>OFFLINE</div>
-      )}
-    </div>
-  );
-}
-
-// ── ALERT ITEM ─────────────────────────────────────────────────────────────
-function AlertItem({ alert, onAck }) {
-  const icons = { high: "🚨", medium: "⚠️", low: "ℹ️" };
-  return (
-    <div className={`alert-strip ${alert.severity}`} style={{ opacity: alert.acked ? 0.5 : 1 }}>
-      <div className="alert-icon">{icons[alert.severity]}</div>
-      <div className="alert-text">
-        <div className="alert-msg">{alert.message}</div>
-        <div className="alert-time">{alert.time}</div>
-      </div>
-      {!alert.acked && (
-        <button className="alert-ack" onClick={() => onAck(alert.id)}>ACK</button>
-      )}
-    </div>
-  );
-}
-
-// ── EVENT ROW ──────────────────────────────────────────────────────────────
-function EventRow({ ev }) {
-  const icons = { person: "🧍", vehicle: "🚗", animal: "🐾" };
-  const typeClass = { person: "person", vehicle: "vehicle", animal: "animal" };
-  return (
-    <div className={`event-row ${!ev.read ? "unread" : ""}`}>
-      <div className={`event-icon-wrap ${ev.alert ? "alert-ev" : typeClass[ev.type]}`}>
-        {ev.alert ? "🚨" : icons[ev.type]}
-      </div>
-      <div className="event-main">
-        <div className="event-label">
-          {ev.label}
-          {ev.alert && <span className="alert-flag">⚠️ ALERT</span>}
-          {ev.plate && <span className="plate-badge">{ev.plate}</span>}
-        </div>
-        <div className="event-meta">{ev.cam}{ev.routine ? " · On routine ✓" : ""}</div>
-      </div>
-      <div className="event-right">
-        <span className="event-time">{ev.time}</span>
-        <span className="event-conf">{Math.round(ev.confidence * 100)}%</span>
-        {!ev.read && <span className="event-unread-dot" />}
-      </div>
-    </div>
-  );
-}
-
-// ── MAIN APP ───────────────────────────────────────────────────────────────
-export default function App() {
-  const [tab, setTab] = useState("home");
-  const [alerts, setAlerts] = useState(ALERTS);
-  const [eventFilter, setEventFilter] = useState("all");
-  const [selectedCam, setSelectedCam] = useState(null);
-  const [chatMessages, setChatMessages] = useState(LLM_HISTORY);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [droneArmed, setDroneArmed] = useState(false);
-  const chatEndRef = useRef(null);
-
-  const unreadAlerts = alerts.filter(a => !a.acked).length;
-  const unreadEvents = EVENTS.filter(e => !e.read).length;
-
-  const ackAlert = (id) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, acked: true } : a));
-
-  const filteredEvents = eventFilter === "all" ? EVENTS
-    : EVENTS.filter(e => e.type === eventFilter || (eventFilter === "alerts" && e.alert));
-
-  const sendChat = async () => {
-    if (!chatInput.trim()) return;
-    const userMsg = chatInput.trim();
-    setChatInput("");
-    setChatMessages(prev => [...prev, { role: "user", text: userMsg }]);
-    setChatLoading(true);
-
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are GUARDIAN — the AI security boss for a private home security system called Property-Guard. You have access to 9 PoE cameras, WiFi CSI motion sensors, license plate recognition, and animal tracking. Today is Tuesday May 5, 2026. Today's activity: 3 people detected, 6 vehicles (including 1 unknown plate: 3RNZ019), 14 animal sightings (including Patches the squirrel on routine, a raccoon, opossum, blue jays, cardinals). 1 high alert: unknown person at side gate at 3:14 AM, stayed 4 minutes then left. Camera 8 (Side Gate) is offline. The 3D Gaussian Splat map was last updated at 2:00 AM. Drone status: standby, battery 94%. Keep responses SHORT (2-4 sentences max), tactical, and helpful. You can answer questions about the property, events, animals, vehicles, and system status.`,
-          messages: [...chatMessages.filter(m => m.role !== "system"), { role: "user", content: userMsg }]
-            .map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.text || m.content || "" }))
-        })
-      });
-      const data = await response.json();
-      const reply = data.content?.[0]?.text || "System busy. Retry.";
-      setChatMessages(prev => [...prev, { role: "assistant", text: reply }]);
-    } catch {
-      setChatMessages(prev => [...prev, { role: "assistant", text: "Comms error. Local network only." }]);
+      );
     }
-    setChatLoading(false);
-  };
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, chatLoading]);
+    function AlertItem({ alert, onAck }) {
+      const icons = { high: "🚨", medium: "⚠️", low: "ℹ️" };
+      return (
+        <div className={`alert-strip ${alert.severity}`} style={{ opacity: alert.acked ? 0.5 : 1 }}>
+          <div className="alert-icon">{icons[alert.severity]}</div>
+          <div className="alert-text">
+            <div className="alert-msg">{alert.message}</div>
+            <div className="alert-time">{alert.time}</div>
+          </div>
+          {!alert.acked && <button className="alert-ack" onClick={() => onAck(alert.id)}>ACK</button>}
+        </div>
+      );
+    }
 
-  const navItems = [
-    { id: "home", icon: "⌂", label: "HOME", badge: null },
-    { id: "cameras", icon: "◉", label: "CAMS", badge: null },
-    { id: "events", icon: "≡", label: "EVENTS", badge: unreadEvents || null },
-    { id: "intel", icon: "◈", label: "INTEL", badge: null },
-    { id: "guard", icon: "◆", label: "GUARD", badge: unreadAlerts || null },
-  ];
-
-  return (
-    <>
-      <style>{css}</style>
-      <div className="shell">
-        {/* TOP BAR */}
-        <div className="topbar">
-          <div className="topbar-logo">PROPERTY<span>·</span>GUARD</div>
-          <div className="topbar-status">
-            <div className={`pulse-dot ${CAMERAS.some(c => c.status === "offline") ? "red" : ""}`} />
-            {CAMERAS.filter(c => c.status === "live").length}/{CAMERAS.length} LIVE
+    function EventRow({ ev }) {
+      const icons = { person: "🧍", vehicle: "🚗", animal: "🐾" };
+      const typeClass = { person: "person", vehicle: "vehicle", animal: "animal" };
+      return (
+        <div className={`event-row ${!ev.read ? "unread" : ""}`}>
+          <div className={`event-icon-wrap ${ev.alert ? "alert-ev" : typeClass[ev.type]}`}>{ev.alert ? "🚨" : icons[ev.type]}</div>
+          <div className="event-main">
+            <div className="event-label">{ev.label}{ev.alert && <span className="alert-flag">⚠️ ALERT</span>}{ev.plate && <span className="plate-badge">{ev.plate}</span>}</div>
+            <div className="event-meta">{ev.cam}{ev.routine ? " · On routine ✓" : ""}</div>
+          </div>
+          <div className="event-right">
+            <span className="event-time">{ev.time}</span>
+            <span className="event-conf">{Math.round(ev.confidence * 100)}%</span>
+            {!ev.read && <span className="event-unread-dot" />}
           </div>
         </div>
+      );
+    }
 
-        {/* CAMERA FULLSCREEN */}
-        {selectedCam && (
-          <div className="cam-full-overlay">
-            <div className="cam-full-top">
-              <div className="cam-full-title">CAM {selectedCam.id} — {selectedCam.name.toUpperCase()}</div>
-              <button className="cam-full-close" onClick={() => setSelectedCam(null)}>✕</button>
-            </div>
-            <div className="cam-full-view">
-              <div className="cam-full-screen">
-                <CamScene cam={selectedCam} full />
-              </div>
-            </div>
-            <div className="cam-full-info">
-              <span className="cam-info-chip live">● LIVE</span>
-              <span className="cam-info-chip res">4K / H.264</span>
-              <span className="cam-info-chip res">{selectedCam.zone.toUpperCase()}</span>
-              {selectedCam.status === "offline" && <span className="cam-info-chip" style={{ color: C.red, borderColor: "rgba(255,59,59,0.3)", background: "rgba(255,59,59,0.1)" }}>OFFLINE</span>}
-            </div>
-          </div>
-        )}
+    export default function App() {
+      const [tab, setTab] = useState("home");
+      const [alerts, setAlerts] = useState(ALERTS);
+      const [eventFilter, setEventFilter] = useState("all");
+      const [selectedCam, setSelectedCam] = useState(null);
+      const [chatMessages, setChatMessages] = useState(LLM_HISTORY);
+      const [chatInput, setChatInput] = useState("");
+      const [chatLoading, setChatLoading] = useState(false);
+      const [droneArmed, setDroneArmed] = useState(false);
+      const chatEndRef = useRef(null);
 
-        {/* ── HOME ─────────────────────────────────────── */}
-        {tab === "home" && (
-          <div className="content">
-            {/* Hero */}
-            <div className="hero">
-              <div className="hero-date">{DAILY_SUMMARY.date}</div>
-              <div className="hero-title">
-                {unreadAlerts > 0 ? <span className="warn">⚠ {unreadAlerts} Alert{unreadAlerts > 1 ? "s" : ""}</span> : <span className="ok">All Clear</span>}
-              </div>
-              <div className="hero-grid">
-                <div className="hero-stat"><div className="hero-stat-val people">{DAILY_SUMMARY.people}</div><div className="hero-stat-lbl">People</div></div>
-                <div className="hero-stat"><div className="hero-stat-val vehicles">{DAILY_SUMMARY.vehicles}</div><div className="hero-stat-lbl">Vehicles</div></div>
-                <div className="hero-stat"><div className="hero-stat-val animals">{DAILY_SUMMARY.animals}</div><div className="hero-stat-lbl">Animals</div></div>
-                <div className="hero-stat"><div className="hero-stat-val alert">{DAILY_SUMMARY.anomalies}</div><div className="hero-stat-lbl">Anomalies</div></div>
-                <div className="hero-stat"><div className="hero-stat-val ok">{DAILY_SUMMARY.totalEvents}</div><div className="hero-stat-lbl">Events</div></div>
-                <div className="hero-stat"><div className="hero-stat-val ok" style={{ fontSize: 16 }}>{DAILY_SUMMARY.systemHealth}%</div><div className="hero-stat-lbl">Health</div></div>
-              </div>
-              <div className="hero-bottom">
-                <span className="hero-chip green">↑ {DAILY_SUMMARY.uptime} uptime</span>
-                <span className="hero-chip orange">3DGS @ {DAILY_SUMMARY.threeDUpdated}</span>
-                <span className="hero-chip" style={{ color: C.textDim }}>{DAILY_SUMMARY.recordingGB}GB rec</span>
+      const unreadAlerts = alerts.filter(a => !a.acked).length;
+      const unreadEvents = EVENTS.filter(e => !e.read).length;
+
+      const ackAlert = (id) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, acked: true } : a));
+      const filteredEvents = eventFilter === "all" ? EVENTS : EVENTS.filter(e => e.type === eventFilter || (eventFilter === "alerts" && e.alert));
+
+      const sendChat = async () => {
+        if (!chatInput.trim()) return;
+        const userMsg = chatInput.trim();
+        setChatInput("");
+        setChatMessages(prev => [...prev, { role: "user", text: userMsg }]);
+        setChatLoading(true);
+        setTimeout(() => {
+          const replies = ["Checking event logs... Person detected at Front-Right at 7:55 AM. No anomalies.", "Patches is on routine — arrived at feeder at 8:31 AM, matching historical pattern.", "One unknown plate today: 3RNZ019, sedan, passed at 6:01 AM. No match in database.", "System healthy. 8 of 9 cameras online. Side Gate camera needs attention.", "No significant alerts since 3:14 AM. Drone battery at 94%, ready if needed."];
+          setChatMessages(prev => [...prev, { role: "assistant", text: replies[Math.floor(Math.random() * replies.length)] }]);
+          setChatLoading(false);
+        }, 1500);
+      };
+
+      useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages, chatLoading]);
+
+      const navItems = [
+        { id: "home", icon: "⌂", label: "HOME", badge: null },
+        { id: "cameras", icon: "◉", label: "CAMS", badge: null },
+        { id: "events", icon: "≡", label: "EVENTS", badge: unreadEvents || null },
+        { id: "intel", icon: "◈", label: "INTEL", badge: null },
+        { id: "guard", icon: "◆", label: "GUARD", badge: unreadAlerts || null },
+      ];
+
+      return (
+        <>
+          <style>{css}</style>
+          <div className="shell">
+            <div className="topbar">
+              <div className="topbar-logo">PROPERTY<span>·</span>GUARD</div>
+              <div className="topbar-status">
+                <div className={`pulse-dot ${CAMERAS.some(c => c.status === "offline") ? "red" : ""}`} />
+                {CAMERAS.filter(c => c.status === "live").length}/{CAMERAS.length} LIVE
               </div>
             </div>
 
-            {/* Active Alerts */}
-            {alerts.some(a => !a.acked) && (
-              <div>
-                <div className="section-label" style={{ marginBottom: 8 }}>Active Alerts</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {alerts.filter(a => !a.acked).map(a => <AlertItem key={a.id} alert={a} onAck={ackAlert} />)}
+            {selectedCam && (
+              <div className="cam-full-overlay">
+                <div className="cam-full-top">
+                  <div className="cam-full-title">CAM {selectedCam.id} — {selectedCam.name.toUpperCase()}</div>
+                  <button className="cam-full-close" onClick={() => setSelectedCam(null)}>✕</button>
+                </div>
+                <div className="cam-full-view"><div className="cam-full-screen"><CamScene cam={selectedCam} full /></div></div>
+                <div className="cam-full-info">
+                  <span className="cam-info-chip live">● LIVE</span>
+                  <span className="cam-info-chip res">4K / H.264</span>
+                  <span className="cam-info-chip res">{selectedCam.zone.toUpperCase()}</span>
+                  {selectedCam.status === "offline" && <span className="cam-info-chip" style={{ color: C.red, borderColor: "rgba(255,59,59,0.3)", background: "rgba(255,59,59,0.1)" }}>OFFLINE</span>}
                 </div>
               </div>
             )}
 
-            {/* Quick cam grid */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Live Cameras</span>
-                <span className="card-badge" onClick={() => setTab("cameras")} style={{ cursor: "pointer" }}>View All →</span>
-              </div>
-              <div className="cam-grid">
-                {CAMERAS.slice(0, 6).map(cam => (
-                  <div key={cam.id}
-                    className={`cam-cell ${cam.threat ? "active-threat" : ""} ${cam.status === "offline" ? "offline" : ""}`}
-                    onClick={() => setSelectedCam(cam)}
-                  >
-                    <div className="cam-visual"><CamScene cam={cam} /></div>
-                    <div className="cam-dot" style={{ position: "absolute", top: 4, right: 4, width: 5, height: 5, borderRadius: "50%", background: cam.status === "live" ? C.red : C.textDim, animation: cam.status === "live" ? "pulse 1.5s infinite" : "none", boxShadow: cam.status === "live" ? `0 0 4px ${C.red}` : "none" }} />
-                    <div className="cam-overlay">
-                      <div className="cam-name">{cam.name}</div>
-                      {cam.threat && <div className="cam-tag">▲ {cam.threat}</div>}
-                    </div>
+            {tab === "home" && (
+              <div className="content">
+                <div className="hero">
+                  <div className="hero-date">{DAILY_SUMMARY.date}</div>
+                  <div className="hero-title">{unreadAlerts > 0 ? <span className="warn">⚠ {unreadAlerts} Alert{unreadAlerts > 1 ? "s" : ""}</span> : <span className="ok">All Clear</span>}</div>
+                  <div className="hero-grid">
+                    <div className="hero-stat"><div className="hero-stat-val people">{DAILY_SUMMARY.people}</div><div className="hero-stat-lbl">People</div></div>
+                    <div className="hero-stat"><div className="hero-stat-val vehicles">{DAILY_SUMMARY.vehicles}</div><div className="hero-stat-lbl">Vehicles</div></div>
+                    <div className="hero-stat"><div className="hero-stat-val animals">{DAILY_SUMMARY.animals}</div><div className="hero-stat-lbl">Animals</div></div>
+                    <div className="hero-stat"><div className="hero-stat-val alert">{DAILY_SUMMARY.anomalies}</div><div className="hero-stat-lbl">Anomalies</div></div>
+                    <div className="hero-stat"><div className="hero-stat-val ok">{DAILY_SUMMARY.totalEvents}</div><div className="hero-stat-lbl">Events</div></div>
+                    <div className="hero-stat"><div className="hero-stat-val ok" style={{ fontSize: 16 }}>{DAILY_SUMMARY.systemHealth}%</div><div className="hero-stat-lbl">Health</div></div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent events preview */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Recent Activity</span>
-                <span className="card-badge" onClick={() => setTab("events")} style={{ cursor: "pointer" }}>All Events →</span>
-              </div>
-              {EVENTS.slice(0, 4).map(ev => <EventRow key={ev.id} ev={ev} />)}
-            </div>
-
-            {/* WiFi presence quick */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">WiFi Presence</span>
-                <span className="card-badge mono" style={{ fontSize: 10 }}>ESP32 CSI</span>
-              </div>
-              {WIFI_ZONES.map(z => (
-                <div key={z.zone} className="wifi-zone">
-                  <div style={{ fontSize: 14 }}>{z.active ? "📡" : "·"}</div>
-                  <div className="wifi-name" style={{ fontSize: 12 }}>{z.zone}</div>
-                  <div className="wifi-bar-wrap"><div className="wifi-bar" style={{ width: `${z.level}%` }} /></div>
-                  <div className={`wifi-status ${z.active ? "active" : "inactive"}`}>{z.active ? "ACTIVE" : z.lastMotion}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── CAMERAS ──────────────────────────────────── */}
-        {tab === "cameras" && (
-          <div className="content">
-            <div className="section-label">All 9 Cameras — Tap to Expand</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
-              {CAMERAS.map(cam => (
-                <div key={cam.id}
-                  className={`cam-cell ${cam.threat ? "active-threat" : ""} ${cam.status === "offline" ? "offline" : ""}`}
-                  style={{ aspectRatio: "16/10" }}
-                  onClick={() => setSelectedCam(cam)}
-                >
-                  <div className="cam-visual" style={{ height: "100%" }}><CamScene cam={cam} /></div>
-                  <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: cam.status === "live" ? C.red : C.textDim, animation: cam.status === "live" ? "pulse 1.5s infinite" : "none" }} />
-                  <div className="cam-overlay">
-                    <div className="cam-name">CAM {cam.id} · {cam.name}</div>
-                    {cam.threat && <div className="cam-tag">▲ {cam.threat.toUpperCase()} DETECTED</div>}
-                    {cam.status === "offline" && <div className="cam-tag" style={{ color: C.red }}>● OFFLINE</div>}
+                  <div className="hero-bottom">
+                    <span className="hero-chip green">↑ {DAILY_SUMMARY.uptime} uptime</span>
+                    <span className="hero-chip orange">3DGS @ {DAILY_SUMMARY.threeDUpdated}</span>
+                    <span className="hero-chip" style={{ color: C.textDim }}>{DAILY_SUMMARY.recordingGB}GB rec</span>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* 3DGS */}
-            <div className="card" style={{ marginTop: 4 }}>
-              <div className="card-header">
-                <span className="card-title">3D Property Map</span>
-                <span className="card-badge">3DGS · Last 2:00 AM</span>
-              </div>
-              <div className="threedgs">
-                <div className="orbit-ring"><div className="orbit-dot" /></div>
-                <div className="orbit-ring orbit-ring2"><div className="orbit-dot" style={{ background: C.green, boxShadow: `0 0 6px ${C.green}` }} /></div>
-                <div style={{ fontSize: 28, zIndex: 2 }}>🏠</div>
-                <div className="threedgs-label">GAUSSIAN SPLAT VIEW</div>
-                <div className="threedgs-sub">Updated nightly · Next: 02:00 AM</div>
-                <button className="threedgs-btn">Open 3D Viewer →</button>
-              </div>
-            </div>
-
-            {/* Drone */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Drone Patrol</span>
-                <span className="card-badge" style={{ color: C.purple, background: "rgba(168,85,247,0.1)" }}>STANDBY</span>
-              </div>
-              <div className="drone-card" style={{ margin: 0, borderRadius: 0, border: "none", borderTop: `1px solid ${C.border}` }}>
-                <div className="drone-header">
-                  <span style={{ fontSize: 20 }}>🚁</span>
-                  <div className="drone-title">ArduPilot UAV — Unit 1</div>
-                  <div className="drone-status">{droneArmed ? "ARMED" : "STANDBY"}</div>
-                </div>
-                <div className="drone-grid">
-                  <div className="drone-stat"><div className="drone-stat-val">94%</div><div className="drone-stat-lbl">Battery</div></div>
-                  <div className="drone-stat"><div className="drone-stat-val">0mph</div><div className="drone-stat-lbl">Speed</div></div>
-                  <div className="drone-stat"><div className="drone-stat-val">N/A</div><div className="drone-stat-lbl">Altitude</div></div>
-                </div>
-                <button className="drone-btn" onClick={() => setDroneArmed(!droneArmed)}
-                  style={{ background: droneArmed ? "rgba(255,59,59,0.15)" : "rgba(168,85,247,0.12)", borderColor: droneArmed ? "rgba(255,59,59,0.4)" : "rgba(168,85,247,0.3)", color: droneArmed ? C.red : C.purple }}>
-                  {droneArmed ? "⬛ DISARM" : "▶ ARM + LAUNCH PATROL"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── EVENTS ───────────────────────────────────── */}
-        {tab === "events" && (
-          <div className="content">
-            <div className="filter-row">
-              {["all", "alerts", "person", "vehicle", "animal"].map(f => (
-                <button key={f} className={`filter-chip ${eventFilter === f ? "active" : ""}`} onClick={() => setEventFilter(f)}>
-                  {f === "all" ? "All" : f === "alerts" ? "🚨 Alerts" : f === "person" ? "🧍 People" : f === "vehicle" ? "🚗 Vehicles" : "🐾 Animals"}
-                </button>
-              ))}
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Today — {DAILY_SUMMARY.date}</span>
-                <span className="card-badge">{filteredEvents.length} events</span>
-              </div>
-              {filteredEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
-            </div>
-          </div>
-        )}
-
-        {/* ── INTEL ────────────────────────────────────── */}
-        {tab === "intel" && (
-          <div className="content">
-            {/* Animals */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Wildlife Today</span>
-                <span className="card-badge">{ANIMALS_TODAY.length} species</span>
-              </div>
-              {ANIMALS_TODAY.map(a => (
-                <div key={a.name} className="animal-row">
-                  <div className="animal-emoji">{a.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div className="animal-name">{a.name}</div>
-                    <div className="animal-visits">{a.visits} visit{a.visits > 1 ? "s" : ""} · Last {a.lastSeen}</div>
-                  </div>
-                  <div className="animal-right">
-                    <span className={a.routine ? "routine-badge" : "new-badge"}>{a.routine ? "On routine" : "New sighting"}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Vehicles */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">Vehicles Today</span>
-                <span className="card-badge">LPR Active</span>
-              </div>
-              {VEHICLES_TODAY.map(v => (
-                <div key={v.plate} className="vehicle-row">
-                  <div className={`vehicle-plate-big ${!v.known ? "unknown" : ""}`}>{v.plate}</div>
-                  <div className="vehicle-info">
-                    <div className="vehicle-make">{v.make}</div>
-                    <div className="vehicle-label">{v.label || "⚠ Unknown"} · {v.visits}x · {v.lastSeen}</div>
-                  </div>
-                  {!v.known && <div style={{ fontSize: 18 }}>🚨</div>}
-                </div>
-              ))}
-            </div>
-
-            {/* System Health */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">System Health</span>
-                <span className="card-badge">{DAILY_SUMMARY.uptime}</span>
-              </div>
-              <div className="sys-grid">
-                <div className="sys-stat">
-                  <div className="sys-val green">{DAILY_SUMMARY.systemHealth}%</div>
-                  <div className="sys-lbl">Overall Health</div>
-                  <div className="health-bar-wrap"><div className="health-bar good" style={{ width: `${DAILY_SUMMARY.systemHealth}%` }} /></div>
-                </div>
-                <div className="sys-stat">
-                  <div className="sys-val accent">8/9</div>
-                  <div className="sys-lbl">Cameras Online</div>
-                  <div className="health-bar-wrap"><div className="health-bar warn" style={{ width: "88%" }} /></div>
-                </div>
-                <div className="sys-stat">
-                  <div className="sys-val green">{DAILY_SUMMARY.recordingGB}GB</div>
-                  <div className="sys-lbl">Recording Used</div>
-                </div>
-                <div className="sys-stat">
-                  <div className="sys-val accent">14W</div>
-                  <div className="sys-lbl">Power Draw</div>
-                </div>
-                <div className="sys-stat">
-                  <div className="sys-val green">N100</div>
-                  <div className="sys-lbl">CPU — 34% load</div>
-                </div>
-                <div className="sys-stat">
-                  <div className="sys-val orange">1</div>
-                  <div className="sys-lbl">Cam Offline</div>
-                </div>
-              </div>
-            </div>
-
-            {/* WiFi CSI full */}
-            <div className="card">
-              <div className="card-header">
-                <span className="card-title">WiFi CSI Presence</span>
-                <span className="card-badge">5 ESP32 Nodes</span>
-              </div>
-              {WIFI_ZONES.map(z => (
-                <div key={z.zone} className="wifi-zone">
-                  <div style={{ fontSize: 16 }}>{z.active ? "🟢" : "⚫"}</div>
-                  <div className="wifi-name">{z.zone}</div>
-                  <div className="wifi-bar-wrap"><div className="wifi-bar" style={{ width: `${z.level}%` }} /></div>
-                  <div className={`wifi-status ${z.active ? "active" : "inactive"}`}>{z.active ? "ACTIVE" : z.lastMotion}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── GUARD (LLM) ──────────────────────────────── */}
-        {tab === "guard" && (
-          <div className="content" style={{ padding: "12px 12px 0" }}>
-            {/* Active Alerts */}
-            {alerts.some(a => !a.acked) && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
-                <div className="section-label">Active Alerts</div>
-                {alerts.map(a => <AlertItem key={a.id} alert={a} onAck={ackAlert} />)}
-              </div>
-            )}
-
-            {/* LLM Chat */}
-            <div className="card" style={{ marginBottom: 90 }}>
-              <div className="card-header">
-                <span className="card-title">◆ GUARDIAN — AI Security Boss</span>
-                <span className="card-badge" style={{ color: C.green, background: "rgba(0,255,136,0.08)" }}>ONLINE</span>
-              </div>
-
-              <div className="chat-messages">
-                {chatMessages.map((m, i) => (
-                  <div key={i} className={`chat-bubble ${m.role}`}>
-                    <div className={`chat-who ${m.role === "assistant" ? "ai" : "me"}`}>
-                      {m.role === "assistant" ? "◆ GUARDIAN" : "YOU"}
-                    </div>
-                    {m.text}
-                  </div>
-                ))}
-                {chatLoading && (
-                  <div className="chat-bubble assistant">
-                    <div className="chat-who ai">◆ GUARDIAN</div>
-                    <div className="chat-thinking">
-                      <span /><span /><span />
-                    </div>
+                {alerts.some(a => !a.acked) && (
+                  <div>
+                    <div className="section-label" style={{ marginBottom: 8 }}>Active Alerts</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>{alerts.filter(a => !a.acked).map(a => <AlertItem key={a.id} alert={a} onAck={ackAlert} />)}</div>
                   </div>
                 )}
-                <div ref={chatEndRef} />
-              </div>
 
-              <div className="chat-input-row">
-                <input
-                  className="chat-input"
-                  placeholder="Ask Guardian about events, animals, vehicles..."
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && sendChat()}
-                />
-                <button className="chat-send" onClick={sendChat}>↑</button>
+                <div className="card">
+                  <div className="card-header">
+                    <span className="card-title">Live Cameras</span>
+                    <span className="card-badge" onClick={() => setTab("cameras")} style={{ cursor: "pointer" }}>View All →</span>
+                  </div>
+                  <div className="cam-grid">
+                    {CAMERAS.slice(0, 6).map(cam => (
+                      <div key={cam.id} className={`cam-cell ${cam.threat ? "active-threat" : ""} ${cam.status === "offline" ? "offline" : ""}`} onClick={() => setSelectedCam(cam)}>
+                        <div className="cam-visual"><CamScene cam={cam} /></div>
+                        <div className="cam-dot" style={{ position: "absolute", top: 4, right: 4, width: 5, height: 5, borderRadius: "50%", background: cam.status === "live" ? C.red : C.textDim, animation: cam.status === "live" ? "pulse 1.5s infinite" : "none", boxShadow: cam.status === "live" ? `0 0 4px ${C.red}` : "none" }} />
+                        <div className="cam-overlay"><div className="cam-name">{cam.name}</div>{cam.threat && <div className="cam-tag">▲ {cam.threat}</div>}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">Recent Activity</span><span className="card-badge" onClick={() => setTab("events")} style={{ cursor: "pointer" }}>All Events →</span></div>
+                  {EVENTS.slice(0, 4).map(ev => <EventRow key={ev.id} ev={ev} />)}
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">WiFi Presence</span><span className="card-badge mono" style={{ fontSize: 10 }}>ESP32 CSI</span></div>
+                  {WIFI_ZONES.map(z => (
+                    <div key={z.zone} className="wifi-zone">
+                      <div style={{ fontSize: 14 }}>{z.active ? "📡" : "·"}</div>
+                      <div className="wifi-name" style={{ fontSize: 12 }}>{z.zone}</div>
+                      <div className="wifi-bar-wrap"><div className="wifi-bar" style={{ width: `${z.level}%` }} /></div>
+                      <div className={`wifi-status ${z.active ? "active" : "inactive"}`}>{z.active ? "ACTIVE" : z.lastMotion}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {tab === "cameras" && (
+              <div className="content">
+                <div className="section-label">All 9 Cameras — Tap to Expand</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                  {CAMERAS.map(cam => (
+                    <div key={cam.id} className={`cam-cell ${cam.threat ? "active-threat" : ""} ${cam.status === "offline" ? "offline" : ""}`} style={{ aspectRatio: "16/10" }} onClick={() => setSelectedCam(cam)}>
+                      <div className="cam-visual" style={{ height: "100%" }}><CamScene cam={cam} /></div>
+                      <div style={{ position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: "50%", background: cam.status === "live" ? C.red : C.textDim, animation: cam.status === "live" ? "pulse 1.5s infinite" : "none" }} />
+                      <div className="cam-overlay"><div className="cam-name">CAM {cam.id} · {cam.name}</div>{cam.threat && <div className="cam-tag">▲ {cam.threat.toUpperCase()} DETECTED</div>}{cam.status === "offline" && <div className="cam-tag" style={{ color: C.red }}>● OFFLINE</div>}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="card" style={{ marginTop: 4 }}>
+                  <div className="card-header"><span className="card-title">3D Property Map</span><span className="card-badge">3DGS · Last 2:00 AM</span></div>
+                  <div className="threedgs">
+                    <div className="orbit-ring"><div className="orbit-dot" /></div>
+                    <div className="orbit-ring orbit-ring2"><div className="orbit-dot" style={{ background: C.green, boxShadow: `0 0 6px ${C.green}` }} /></div>
+                    <div style={{ fontSize: 28, zIndex: 2 }}>🏠</div>
+                    <div className="threedgs-label">GAUSSIAN SPLAT VIEW</div>
+                    <div className="threedgs-sub">Updated nightly · Next: 02:00 AM</div>
+                    <button className="threedgs-btn">Open 3D Viewer →</button>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">Drone Patrol</span><span className="card-badge" style={{ color: C.purple, background: "rgba(168,85,247,0.1)" }}>STANDBY</span></div>
+                  <div className="drone-card" style={{ margin: 0, borderRadius: 0, border: "none", borderTop: `1px solid ${C.border}` }}>
+                    <div className="drone-header"><span style={{ fontSize: 20 }}>🚁</span><div className="drone-title">ArduPilot UAV — Unit 1</div><div className="drone-status">{droneArmed ? "ARMED" : "STANDBY"}</div></div>
+                    <div className="drone-grid">
+                      <div className="drone-stat"><div className="drone-stat-val">94%</div><div className="drone-stat-lbl">Battery</div></div>
+                      <div className="drone-stat"><div className="drone-stat-val">0mph</div><div className="drone-stat-lbl">Speed</div></div>
+                      <div className="drone-stat"><div className="drone-stat-val">N/A</div><div className="drone-stat-lbl">Altitude</div></div>
+                    </div>
+                    <button className="drone-btn" onClick={() => setDroneArmed(!droneArmed)} style={{ background: droneArmed ? "rgba(255,59,59,0.15)" : "rgba(168,85,247,0.12)", borderColor: droneArmed ? "rgba(255,59,59,0.4)" : "rgba(168,85,247,0.3)", color: droneArmed ? C.red : C.purple }}>{droneArmed ? "⬛ DISARM" : "▶ ARM + LAUNCH PATROL"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {tab === "events" && (
+              <div className="content">
+                <div className="filter-row">
+                  {["all", "alerts", "person", "vehicle", "animal"].map(f => <button key={f} className={`filter-chip ${eventFilter === f ? "active" : ""}`} onClick={() => setEventFilter(f)}>{f === "all" ? "All" : f === "alerts" ? "🚨 Alerts" : f === "person" ? "🧍 People" : f === "vehicle" ? "🚗 Vehicles" : "🐾 Animals"}</button>)}
+                </div>
+                <div className="card">
+                  <div className="card-header"><span className="card-title">Today — {DAILY_SUMMARY.date}</span><span className="card-badge">{filteredEvents.length} events</span></div>
+                  {filteredEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
+                </div>
+              </div>
+            )}
+
+            {tab === "intel" && (
+              <div className="content">
+                <div className="card">
+                  <div className="card-header"><span className="card-title">Wildlife Today</span><span className="card-badge">{ANIMALS_TODAY.length} species</span></div>
+                  {ANIMALS_TODAY.map(a => (
+                    <div key={a.name} className="animal-row">
+                      <div className="animal-emoji">{a.icon}</div>
+                      <div style={{ flex: 1 }}><div className="animal-name">{a.name}</div><div className="animal-visits">{a.visits} visit{a.visits > 1 ? "s" : ""} · Last {a.lastSeen}</div></div>
+                      <div className="animal-right"><span className={a.routine ? "routine-badge" : "new-badge"}>{a.routine ? "On routine" : "New sighting"}</span></div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">Vehicles Today</span><span className="card-badge">LPR Active</span></div>
+                  {VEHICLES_TODAY.map(v => (
+                    <div key={v.plate} className="vehicle-row">
+                      <div className={`vehicle-plate-big ${!v.known ? "unknown" : ""}`}>{v.plate}</div>
+                      <div className="vehicle-info"><div className="vehicle-make">{v.make}</div><div className="vehicle-label">{v.label || "⚠ Unknown"} · {v.visits}x · {v.lastSeen}</div></div>
+                      {!v.known && <div style={{ fontSize: 18 }}>🚨</div>}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">System Health</span><span className="card-badge">{DAILY_SUMMARY.uptime}</span></div>
+                  <div className="sys-grid">
+                    <div className="sys-stat"><div className="sys-val green">{DAILY_SUMMARY.systemHealth}%</div><div className="sys-lbl">Overall Health</div><div className="health-bar-wrap"><div className="health-bar good" style={{ width: `${DAILY_SUMMARY.systemHealth}%` }} /></div></div>
+                    <div className="sys-stat"><div className="sys-val accent">8/9</div><div className="sys-lbl">Cameras Online</div><div className="health-bar-wrap"><div className="health-bar warn" style={{ width: "88%" }} /></div></div>
+                    <div className="sys-stat"><div className="sys-val green">{DAILY_SUMMARY.recordingGB}GB</div><div className="sys-lbl">Recording Used</div></div>
+                    <div className="sys-stat"><div className="sys-val accent">14W</div><div className="sys-lbl">Power Draw</div></div>
+                    <div className="sys-stat"><div className="sys-val green">N100</div><div className="sys-lbl">CPU — 34% load</div></div>
+                    <div className="sys-stat"><div className="sys-val orange">1</div><div className="sys-lbl">Cam Offline</div></div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><span className="card-title">WiFi CSI Presence</span><span className="card-badge">5 ESP32 Nodes</span></div>
+                  {WIFI_ZONES.map(z => (
+                    <div key={z.zone} className="wifi-zone">
+                      <div style={{ fontSize: 16 }}>{z.active ? "🟢" : "⚫"}</div>
+                      <div className="wifi-name">{z.zone}</div>
+                      <div className="wifi-bar-wrap"><div className="wifi-bar" style={{ width: `${z.level}%` }} /></div>
+                      <div className={`wifi-status ${z.active ? "active" : "inactive"}`}>{z.active ? "ACTIVE" : z.lastMotion}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {tab === "guard" && (
+              <div className="content" style={{ padding: "12px 12px 0" }}>
+                {alerts.some(a => !a.acked) && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 4 }}>
+                    <div className="section-label">Active Alerts</div>
+                    {alerts.map(a => <AlertItem key={a.id} alert={a} onAck={ackAlert} />)}
+                  </div>
+                )}
+                <div className="card" style={{ marginBottom: 90 }}>
+                  <div className="card-header">
+                    <span className="card-title">◆ GUARDIAN — AI Security Boss</span>
+                    <span className="card-badge" style={{ color: C.green, background: "rgba(0,255,136,0.08)" }}>ONLINE</span>
+                  </div>
+                  <div className="chat-messages">
+                    {chatMessages.map((m, i) => (
+                      <div key={i} className={`chat-bubble ${m.role}`}>
+                        <div className={`chat-who ${m.role === "assistant" ? "ai" : "me"}`}>{m.role === "assistant" ? "◆ GUARDIAN" : "YOU"}</div>
+                        {m.text}
+                      </div>
+                    ))}
+                    {chatLoading && <div className="chat-bubble assistant"><div className="chat-who ai">◆ GUARDIAN</div><div className="chat-thinking"><span /><span /><span /></div></div>}
+                    <div ref={chatEndRef} />
+                  </div>
+                  <div className="chat-input-row">
+                    <input className="chat-input" placeholder="Ask Guardian about events, animals, vehicles..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendChat()} />
+                    <button className="chat-send" onClick={sendChat}>↑</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <nav className="bottomnav">
+              {navItems.map(n => (
+                <button key={n.id} className={`nav-item ${tab === n.id ? "active" : ""}`} onClick={() => setTab(n.id)}>
+                  {n.badge && <span className="nav-badge">{n.badge}</span>}
+                  <span className="nav-icon">{n.icon}</span>
+                  <span>{n.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
-        )}
-
-        {/* BOTTOM NAV */}
-        <nav className="bottomnav">
-          {navItems.map(n => (
-            <button key={n.id} className={`nav-item ${tab === n.id ? "active" : ""}`} onClick={() => setTab(n.id)}>
-              {n.badge && <span className="nav-badge">{n.badge}</span>}
-              <span className="nav-icon">{n.icon}</span>
-              <span>{n.label}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
-    </>
-  );
-}
+        </>
+      );
+    }
+  </script>
+</body>
+</html>
